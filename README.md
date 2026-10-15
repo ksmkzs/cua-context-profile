@@ -1,16 +1,22 @@
 # CUA context profile
 
 Progressively load Computer Use documentation: a compact entry guide first,
-then native/browser reference only when needed. This is an independent,
+then automatically load the relevant native/browser reference when a binding is selected. This is an independent,
 experimental integration for the CUA runtime bundled with the Codex desktop app
 (including distributions named ChatGPT.app).
 
 ## Scope
 
-The approach—small entry instructions, task-specific reference, bounded observations,
-and fresh state after compaction—is reusable across installations. The included
-runtime adapter currently supports **macOS**. On other platforms the profile
-returns the original documentation. It does not implement a new CUA engine.
+The adapter reads the **controlled computer's** `cua.computer.target` and the
+initialized surfaces. It selects macOS, Linux or Windows instructions without
+assuming the JavaScript host and controlled computer are the same machine.
+Browser-only sessions need no native OS. Unknown targets, missing capabilities
+or unrecognized documentation layouts retain the complete original text.
+
+The package installer currently runs on macOS. The splitting logic covers all
+three target OS families and is tested with synthetic target/provider fixtures;
+Linux/Windows native UI sessions have not been tested. This does not claim a
+Windows/Linux desktop installer or provision a new CUA engine.
 
 This repository contains our adapter, profile and synthetic tests, under MIT.
 It does not include OpenAI executables, copied packages, vendor documentation,
@@ -46,10 +52,24 @@ can use that configuration, but does not require this profile.
 
 ## Behavior and limits
 
-The compact guide points to `cua.documentation("native")`, `"browser"`, and
-`"full"`. These are adapter-provided APIs, available only when the overlay is
-actually active. Read the documentation returned by the runtime; never assume the
-overlay loaded. `cua.rewriteDocumentation()` remains the post-compaction entry.
+The first guide contains only enabled entry points and target-specific binding
+instructions. `getApp()` automatically loads that target's native reference;
+`getBrowser()`, `getTab()` and `createBrowserTab()` automatically load the browser
+reference. Each surface/context is emitted once, including concurrent calls.
+The runtime's own browser/provider instructions remain untouched and authoritative
+for DOM-only, extension, in-app browser and other provider differences.
+
+No inventory query, app launch or browser connection is performed just to detect
+capabilities. Empty inventories are not treated as disabled surfaces. Successful
+provider initialization and configured surfaces determine API availability, not
+whether a particular browser is currently connected or reachable.
+
+`cua.documentation("native" | "browser" | "full")` remains available for explicit
+reference requests. `cua.rewriteDocumentation()` preserves upstream behavior and
+re-emits previously used references so existing bindings remain usable after compaction.
+These extensions exist only when this overlay loaded; follow the actual returned
+documentation. A reference-output failure occurs before binding, avoiding a false
+failure after an app launch/tab creation that might otherwise be retried.
 
 Approval instructions and app-specific instructions remain upstream-controlled.
 The adapter does not modify input, IPC, permissions, or lifecycle behavior.

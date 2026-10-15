@@ -20,6 +20,7 @@ REL = Path('dist/lib/js/oai_js_cua/src/tinysky_alt')
 GUARDS = ['package.json', 'docs/tinysky-alt-core-cua-repl.md',
           'docs/tinysky-alt-confirmations.md', str(REL / 'read_documentation.js'),
           str(REL / 'globals.js'), str(REL / 'create_documentation.js'),
+          str(REL / 'create_tinysky_alt.js'), str(REL / 'create_bootstrap_emitter.js'),
           '../../../../manifest.json', '../../../../../../Info.plist']
 
 def digest(p):
@@ -54,33 +55,14 @@ def main():
                               capture_output=True, text=True).stdout.strip()
     shutil.copytree(SOURCE, PACKAGE, symlinks=True)
     shutil.copyfile(HERE / 'profile.mjs', PACKAGE / REL / 'context_profile.mjs')
-    (PACKAGE / REL / 'read_documentation.js').write_text('''
-import {existsSync} from 'node:fs';
-import {readFile} from 'node:fs/promises';
-import {compactCore, detailedDocs} from './context_profile.mjs';
-let root = new URL('.', import.meta.url);
-while (!existsSync(new URL('package.json', root))) {
-  const parent = new URL('..', root);
-  if (parent.href === root.href) throw new Error('Could not find CUA package');
-  root = parent;
-}
-const docs = new URL('docs/', root);
-export async function read_documentation(name) {
-  const text = await readFile(new URL(`tinysky-alt-${name}.md`, docs), 'utf8');
-  return name === 'core-cua-repl'
-    ? compactCore(text, 'darwin', globalThis.nodeRepl?.env?.CUA_REPL_ENABLED_SURFACES)
-    : text;
-}
-export async function show_documentation(topic = 'native') {
-  const original = await readFile(new URL('tinysky-alt-core-cua-repl.md', docs), 'utf8');
-  const text = detailedDocs(original, topic, 'darwin');
-  await globalThis.nodeRepl.write(text, `cua.detail.${topic}`);
-}
-'''.lstrip())
+    shutil.copyfile(HERE / 'adaptive.mjs', PACKAGE / REL / 'adaptive_docs.mjs')
+    shutil.copyfile(HERE / 'reader.mjs', PACKAGE / REL / 'read_documentation.js')
     (PACKAGE / REL / 'globals.js').write_text(
         'import {show_documentation} from "./read_documentation.js";\n' +
+        'import {attachAdaptiveDocs} from "./adaptive_docs.mjs";\n' +
         original.replace(marker,
-            'Object.defineProperty(n,"documentation",{value:show_documentation,enumerable:true});' + marker))
+            'Object.defineProperty(n,"documentation",{value:show_documentation,enumerable:true});' +
+            'attachAdaptiveDocs(n,{surfaces:()=>globalThis.nodeRepl?.env?.CUA_REPL_ENABLED_SURFACES,emitDetail:show_documentation});' + marker))
     manifest = {'upstream_root': str(SOURCE), 'sha256': hashes,
                 'original_node_repl': str(BASE / 'bin/node_repl'),
                 'previous_launchctl_override': previous, 'app': str(APP)}
