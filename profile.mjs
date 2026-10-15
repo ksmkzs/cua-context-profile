@@ -80,7 +80,7 @@ ${c.computer && c.platform === 'darwin' ? 'Prefer default AX diffs; request disa
 await cua.getState(); // inventory; displays results automatically
 ${c.computer ? `await cua.listApps();
 ${c.platform === 'darwin' ? 'const app = await cua.getApp("Example App");' : 'const app = await cua.getApp({windowId: 123}); // exact ID from current inventory'}
-Native reference for ${platforms[c.platform]} is displayed automatically when getApp succeeds.
+Native reference for ${platforms[c.platform]} is displayed automatically before getApp binds the app.
 ` : 'Native app access is not enabled.\n'}${c.browser ? `await cua.listBrowsers();
 const browser = await cua.getBrowser({id:"ID from inventory"});
 Selection opens no tab. Browser reference loads automatically on selection/binding.
