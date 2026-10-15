@@ -1,5 +1,7 @@
 # CUA context profile
 
+English | [日本語](README.ja.md)
+
 Progressively load Computer Use documentation: a compact entry guide first,
 then automatically load the relevant native/browser reference when a binding is selected. This is an independent,
 experimental integration for the CUA runtime bundled with the Codex desktop app
@@ -81,7 +83,7 @@ python activate_windows.py --restore
 The installed directory also contains `activate_windows.py` for recovery.
 
 For a compatible external MCP launcher, explicitly set `CUA_REPL_NODE_REPL_PATH`
-to the installed `node-repl` wrapper. The [Claude bridge](https://github.com/ksmkzs/claude-cua-mcp)
+to the installed wrapper (`node-repl` on macOS or `node-repl.exe` on Windows). The [Claude bridge](https://github.com/ksmkzs/claude-cua-mcp)
 can use that configuration, but does not require this profile.
 
 ## Behavior and limits
@@ -126,8 +128,7 @@ CUA_PACKAGE=/path/to/cua_node/lib/node_modules/@oai/cua node test_profile.mjs
 ```
 
 Default tests use authored synthetic documentation and temporary directories;
-no installed app, GUI session, or user profile is needed. The local check prints
-character counts, not token savings or billing estimates. Tests do not establish
+no installed app, GUI session, or user profile is needed. The checks do not measure token savings or billing reductions. Tests do not establish
 that the desktop host selected the overlay; confirm that in a new CUA session.
 
 ## Automatic update PRs
