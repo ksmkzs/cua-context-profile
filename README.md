@@ -13,10 +13,10 @@ assuming the JavaScript host and controlled computer are the same machine.
 Browser-only sessions need no native OS. Unknown targets, missing capabilities
 or unrecognized documentation layouts retain the complete original text.
 
-The package installer currently runs on macOS. The splitting logic covers all
-three target OS families and is tested with synthetic target/provider fixtures;
-Linux/Windows native UI sessions have not been tested. This does not claim a
-Windows/Linux desktop installer or provision a new CUA engine.
+Package installers are provided for macOS and Windows. The splitting logic covers
+all three target OS families and is tested with synthetic target/provider fixtures.
+Native Windows/Linux UI operation remains a separate verification step; installing
+this profile does not provision a new CUA engine or enable unavailable app features.
 
 This repository contains our adapter, profile and synthetic tests, under MIT.
 It does not include OpenAI executables, copied packages, vendor documentation,
@@ -25,7 +25,9 @@ CUA-capable desktop app and the permissions required by that app.
 
 ## Install
 
-Requirements: macOS, Python 3, and a CUA-capable Codex/ChatGPT app bundle.
+### macOS
+
+Requirements: Python 3 and a CUA-capable Codex/ChatGPT app bundle.
 Preparation copies the user's local CUA package outside the signed app and applies
 only the documentation adapter. It does not edit the app bundle or activate itself.
 
@@ -45,6 +47,38 @@ To restore the previous desktop override:
 ```sh
 python3 activate.py --restore
 ```
+
+### Windows
+
+Requirements: Python 3, a CUA-capable installed desktop app, and the Windows .NET
+Framework compiler (`Framework64/v4.0.30319/csc.exe`). The launcher is compiled
+locally; no OpenAI executables are distributed by this repository.
+
+From PowerShell in this repository, pass the installed directory containing
+`resources/cua_node/bin/node_modules/@oai/cua`:
+
+```powershell
+python install_windows.py --app 'C:\path\to\installed\app'
+python test_windows_wrapper.py
+python activate_windows.py
+```
+
+Preparation validates the bundled documentation before copying the package and
+does not activate the overlay. Activation sets `CODEX_NODE_REPL_PATH` in the
+current user's environment and broadcasts the environment change. Run activation
+in the interactive Windows session so Explorer receives that broadcast. Close and
+reopen Codex afterward. A launch from an already-open terminal may retain its old
+environment; open a new terminal or sign out/in when necessary. Unlike macOS
+activation, this user setting persists across sign-ins.
+
+`--dest PATH` is supported by both Windows commands. Existing installation
+directories and other configured overrides are preserved. Restore with:
+
+```powershell
+python activate_windows.py --restore
+```
+
+The installed directory also contains `activate_windows.py` for recovery.
 
 For a compatible external MCP launcher, explicitly set `CUA_REPL_NODE_REPL_PATH`
 to the installed `node-repl` wrapper. The [Claude bridge](https://github.com/ksmkzs/claude-cua-mcp)
@@ -85,6 +119,8 @@ upstream instructions; do not blindly refresh hashes to suppress a failure.
 ```sh
 npm test
 python3 -m unittest discover -s tests
+# On Windows, also test the locally compiled launcher:
+python test_windows_wrapper.py
 # Optional local reference check (uses your installed files, never uploads them):
 CUA_PACKAGE=/path/to/cua_node/lib/node_modules/@oai/cua node test_profile.mjs
 ```
