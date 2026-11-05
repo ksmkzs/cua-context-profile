@@ -4,8 +4,7 @@ import {readFile} from 'node:fs/promises';
 import {compactCore, detailedDocs} from './profile.mjs';
 import {contextFromTarget, runtimeContext, attachAdaptiveDocs} from './adaptive.mjs';
 import {fixture} from './tests/fixture.mjs';
-const original = process.env.CUA_PACKAGE
-  ? await readFile(`${process.env.CUA_PACKAGE}/docs/tinysky-alt-core-cua-repl.md`,'utf8') : fixture;
+const original = fixture;
 function runtime(target='mac') {
   return {computer:{target}, listApps(){}, getApp:async()=>({binding:true}),
     getBrowser:async()=>({provider:true}), getTab:async()=>({tab:true}),
@@ -88,3 +87,23 @@ test('unknown context does not probe or replace original methods with guessed be
   attachAdaptiveDocs(cua,{surfaces:()=> 'computer',emitDetail:async()=>emitted++});
   assert.deepEqual(await cua.getApp('a'),{binding:true});assert.equal(emitted,0);
 });
+
+if (process.env.CUA_PACKAGE) {
+  const {existsSync} = await import('node:fs');
+  for (const [suffix,platform] of [['mac','darwin'],['linux','linux'],['windows','win32'],['no-cua',null]]) {
+    test(`installed documentation layout: ${suffix}`,async()=>{
+      const root=process.env.CUA_PACKAGE+'/docs/';
+      const path=existsSync(root+'tinysky-alt-core-cua-repl.md') ? root+'tinysky-alt-core-cua-repl.md' : root+`tinysky-alt-core-cua-repl-${suffix}.md`;
+      const text=await readFile(path,'utf8');
+      const c={platform,computer:platform!==null,browser:true,targetSpecific:!existsSync(root+'tinysky-alt-core-cua-repl.md')};
+      const compact=compactCore(text,c);
+      assert.notEqual(compact,text,'supported layout must actually compact');
+      assert(compact.length<text.length/2);
+      assert(compact.includes('completion_summary'));
+      const detail=detailedDocs(text,platform?'native':'browser',c);
+      assert.notEqual(detail,text);
+      assert.equal(detailedDocs(text,'full',c),text);
+      if(platform) assert(detail.includes(text.slice(text.indexOf('## Workflow'))),'preserve original behavior sections');
+    });
+  }
+}

@@ -52,7 +52,7 @@ function apiParts(original) {
   if (!api) throw new Error('Unrecognized API block');
   const t = api[1], app = t.indexOf('type AppInfo'), browser = t.indexOf('type BrowserInfo'), cua = t.indexOf('declare const cua:');
   if (!(app > 0 && browser > app && cua > browser)) throw new Error('Unrecognized API boundaries');
-  for (const heading of ['Native apps','Workflow','Output','Notes']) section(original,heading);
+  for (const heading of ['Workflow','Output','Notes']) section(original,heading);
   return {shared:t.slice(0,app),native:t.slice(0,browser),browser:t.slice(browser,cua)};
 }
 
@@ -94,6 +94,9 @@ this re-emits enabled references for existing bindings. Reacquire fresh UI state
 Discovery, selection and observation display their results; do not write them again.
 Use nodeRepl.write(value) or await nodeRepl.emitImage(image) for other output.
 Keep observations bounded and do not print entire runtime objects.
+When the js tool supports completion_summary, report the observed CUA outcome
+through that branch exactly once, following the tool's current completion instructions.
+Do not combine that report with code or confuse it with closing a task window.
 `;
 }
 
@@ -106,15 +109,20 @@ export function detailedDocs(original, topic, value, surfaces) {
   let api;
   try { api=apiParts(original); } catch { return original; }
   if (topic === 'native') {
+    // The current upstream ships target-specific core files. Preserve their
+    // native instructions and behavioral sections instead of only our summary.
+    let nativeInstructions;
+    try { nativeInstructions=section(original,'Native apps'); } catch { return original; }
     let types=api.native;
-    if (c.platform !== 'darwin') types=types.replace(/^  selectText\([^\n]*\n/gm,'');
-    if (c.platform === 'linux') types=types.replace(/^  setValue\([^\n]*\n/gm,'');
-    return `## Native reference — ${platforms[c.platform]}\n\n${platformNotes[c.platform]}\n\n`+
+    if (!c.targetSpecific && c.platform !== 'darwin') types=types.replace(/^  selectText\([^\n]*\n/gm,'');
+    if (!c.targetSpecific && c.platform === 'linux') types=types.replace(/^  setValue\([^\n]*\n/gm,'');
+    return `## Native reference — ${platforms[c.platform]}\n\n${c.targetSpecific ? '' : platformNotes[c.platform]}\n\n`+
       '```typescript\n'+types.trim()+'\n```\n\n'+
       'Read current AX state after actions; use fresh exposed indices/actions only.\n'+
       'Bindings and observations display their output automatically. Use only options supported\n'+
       'by this target; platform restrictions above override shared type signatures.\n'+
-      'For unlisted semantics consult cua.documentation("full").\n';
+      'For unlisted semantics consult cua.documentation("full").\n\n'+
+      nativeInstructions+'\n\n'+original.slice(original.indexOf('## Workflow\n'));
   }
   return '## Browser reference\n\n```typescript\n'+api.shared.trim()+'\n'+api.browser.trim()+'\n```\n\n'+
     'Select via getBrowser; bind an existing tab via getTab; open via createBrowserTab.\n'+

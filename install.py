@@ -8,6 +8,7 @@ from pathlib import Path
 import shutil
 import subprocess
 import sys
+from layout import guard_files
 
 HERE = Path(__file__).resolve().parent
 APP = None
@@ -17,11 +18,6 @@ DEST = Path.home() / '.codex/cua-context-profile'
 MODULES = DEST / 'node_modules'
 PACKAGE = MODULES / '@oai/cua'
 REL = Path('dist/lib/js/oai_js_cua/src/tinysky_alt')
-GUARDS = ['package.json', 'docs/tinysky-alt-core-cua-repl.md',
-          'docs/tinysky-alt-confirmations.md', str(REL / 'read_documentation.js'),
-          str(REL / 'globals.js'), str(REL / 'create_documentation.js'),
-          str(REL / 'create_tinysky_alt.js'), str(REL / 'create_bootstrap_emitter.js'),
-          '../../../../manifest.json', '../../../../../../Info.plist']
 
 def digest(p):
     return hashlib.sha256(p.read_bytes()).hexdigest()
@@ -45,7 +41,7 @@ def main():
         raise SystemExit('This installer is for macOS only')
     if DEST.exists():
         raise SystemExit(f'Existing installation preserved: {DEST}')
-    hashes = {rel: digest(SOURCE / rel) for rel in GUARDS}
+    hashes = {rel: digest(SOURCE / rel) for rel in guard_files(SOURCE, macos=True)}
     original = (SOURCE / REL / 'globals.js').read_text()
     marker = 'Reflect.set(globalThis,"cua",n);'
     if original.count(marker) != 1:

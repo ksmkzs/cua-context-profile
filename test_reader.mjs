@@ -41,3 +41,28 @@ test('bootstrap reader detects provider target before global cua exists and leav
     await rm(root,{recursive:true,force:true});
   }
 });
+
+test('target-specific reader selects controlled target and preserves policy and complete source',async()=>{
+  const root=await mkdtemp(join(tmpdir(),'target-reader-'));
+  const savedCua=globalThis.cua,savedNode=globalThis.nodeRepl;
+  try {
+    const dir=join(root,'lib/js/oai_js_cua/src/tinysky_alt');await mkdir(dir,{recursive:true});await mkdir(join(root,'docs'));
+    await writeFile(join(root,'package.json'),'{"type":"module"}');
+    for(const [from,to] of [['reader.mjs','read_documentation.js'],['adaptive.mjs','adaptive_docs.mjs'],['profile.mjs','context_profile.mjs']])await copyFile(new URL(from,import.meta.url),join(dir,to));
+    for(const target of ['mac','linux','windows','no-cua'])await writeFile(join(root,`docs/tinysky-alt-core-cua-repl-${target}.md`),fixture+'\nTARGET_'+target);
+    const policy='EXACT APPROVAL POLICY\n';await writeFile(join(root,'docs/tinysky-alt-confirmations.md'),policy);
+    const outputs=[];globalThis.nodeRepl={env:{CUA_REPL_ENABLED_SURFACES:'computer,browser'},write:async(t)=>outputs.push(t)};
+    globalThis.cua={computer:{target:'mac'},getApp(){},listApps(){},getBrowser(){},getTab(){}};
+    const reader=await import(pathToFileURL(join(dir,'read_documentation.js')));
+    assert((await reader.read_documentation('core-cua-repl-mac')).includes('Computer Use — macOS'));
+    assert.equal(await reader.read_documentation('confirmations'),policy);
+    await reader.show_documentation('full');assert.equal(outputs.at(-1),fixture+'\nTARGET_mac');
+    globalThis.cua.computer.target='linux';
+    await reader.show_documentation('native');assert(outputs.at(-1).includes('TARGET_linux'));assert(!outputs.at(-1).includes('TARGET_mac'));
+    assert.equal(await reader.read_documentation('core-cua-repl-mac'),fixture+'\nTARGET_mac','mismatched target keeps the complete original');
+  } finally {
+    if(savedCua===undefined)delete globalThis.cua;else globalThis.cua=savedCua;
+    if(savedNode===undefined)delete globalThis.nodeRepl;else globalThis.nodeRepl=savedNode;
+    await rm(root,{recursive:true,force:true});
+  }
+});

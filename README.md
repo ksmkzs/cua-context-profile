@@ -27,6 +27,19 @@ CUA-capable desktop app and the permissions required by that app.
 
 ## Install
 
+Version 0.4.0 supports both the legacy combined core reference and the newer
+`core-cua-repl-{mac,linux,windows,no-cua}` files. It selects documentation from
+the controlled target, preserves the original behavioral sections in the native
+reference, and leaves upstream confirmation-policy composition unchanged.
+All files in the selected layout are validated before installation; a missing
+file or later hash change keeps the stock-runtime fallback.
+
+For an upgrade, prepare a new directory with `--dest` and validate it before
+activation. If an older profile is already active, pass its directory with
+`activate.py --previous-dest OLD --dest NEW`; other overrides are preserved.
+The bridge's explicit `CUA_REPL_NODE_REPL_PATH` must also point to the new
+wrapper. Updating the desktop override alone does not update that setting.
+
 ### macOS
 
 Requirements: Python 3 and a CUA-capable Codex/ChatGPT app bundle.

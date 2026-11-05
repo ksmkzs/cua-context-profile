@@ -10,6 +10,18 @@ while (!existsSync(new URL('package.json',root))) {
   root = parent;
 }
 const docs = new URL('docs/',root);
+let lastCore;
+const suffixes = {darwin:'mac',linux:'linux',win32:'windows'};
+async function originalCore(c) {
+  const legacy = new URL('tinysky-alt-core-cua-repl.md',docs);
+  if (existsSync(legacy)) return readFile(legacy,'utf8');
+  if (c) {
+    const suffix = c.computer ? suffixes[c.platform] : 'no-cua';
+    if (suffix) return readFile(new URL(`tinysky-alt-core-cua-repl-${suffix}.md`,docs),'utf8');
+  }
+  if (lastCore !== undefined) return lastCore;
+  throw new Error('Controlled target is unknown; no platform-specific documentation selected');
+}
 async function context() {
   const surfaces = globalThis.nodeRepl?.env?.CUA_REPL_ENABLED_SURFACES;
   if (globalThis.cua) return runtimeContext(globalThis.cua, surfaces);
@@ -25,11 +37,17 @@ async function context() {
 }
 export async function read_documentation(name) {
   const text = await readFile(new URL(`tinysky-alt-${name}.md`,docs),'utf8');
-  return name === 'core-cua-repl' ? compactCore(text,await context()) : text;
+  if (!/^core-cua-repl(?:-(mac|linux|windows|no-cua))?$/.test(name)) return text;
+  lastCore=text;
+  const c=await context();
+  const suffix=name.slice('core-cua-repl-'.length);
+  if (name !== 'core-cua-repl' && (!c || suffix !== (c.computer ? suffixes[c.platform] : 'no-cua'))) return text;
+  return compactCore(text,c && {...c,targetSpecific:name !== 'core-cua-repl'});
 }
 export async function show_documentation(topic='native', observed) {
-  const original = await readFile(new URL('tinysky-alt-core-cua-repl.md',docs),'utf8');
-  const text = detailedDocs(original,topic,observed ?? await context());
+  const c=observed ?? await context();
+  const original = await originalCore(c);
+  const text = detailedDocs(original,topic,c && {...c,targetSpecific:!existsSync(new URL('tinysky-alt-core-cua-repl.md',docs))});
   // A layout mismatch already emitted the full core at bootstrap. Avoid duplicating it.
   if (observed && text === original) return;
   await globalThis.nodeRepl.write(text,`cua.detail.${topic}`);

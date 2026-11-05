@@ -2,6 +2,7 @@
 """Prepare a documentation overlay from an installed Windows desktop bundle."""
 import argparse
 import hashlib
+from layout import guard_files
 import json
 import os
 from pathlib import Path
@@ -32,10 +33,7 @@ def main():
     for path in (source/'package.json', compiler, runtime, node):
         if not path.is_file():
             raise SystemExit(f'Required installed file missing: {path}')
-    guards = ['package.json', 'docs/tinysky-alt-core-cua-repl.md', 'docs/tinysky-alt-confirmations.md']
-    guards += [str(REL/name) for name in ('read_documentation.js','globals.js','create_documentation.js','create_tinysky_alt.js','create_bootstrap_emitter.js')]
-    guards += ['../../../../manifest.json']  # four parents from bin/node_modules/@oai/cua
-    hashes = {rel: hashlib.sha256((source/rel).read_bytes()).hexdigest() for rel in guards}
+    hashes = {rel: hashlib.sha256((source/rel).read_bytes()).hexdigest() for rel in guard_files(source)}
     original = (source/REL/'globals.js').read_text(encoding='utf8')
     marker = 'Reflect.set(globalThis,"cua",n);'
     if original.count(marker) != 1:
