@@ -1,10 +1,11 @@
 {
   "name": "cua-context-profile",
-  "version": "0.4.0",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
   "license": "MIT",
+  "engines": { "node": ">=22" },
   "scripts": {
-    "test": "node --test test_profile.mjs test_reader.mjs && python3 test_wrapper.py"
+    "test": "node --test --test-force-exit --test-timeout=20000 test/*.test.mjs"
   }
 }

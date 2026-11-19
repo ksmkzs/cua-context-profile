@@ -1,0 +1,23 @@
+#!/bin/sh
+# Drop-in replacement for the Codex desktop app's CUA runtime launcher (node_repl).
+# Point CODEX_NODE_REPL_PATH at this file. Everything it needs comes from the environment the
+# desktop app passes, so it keeps working across app updates without being reinstalled.
+here=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)
+node=${NODE_REPL_NODE_PATH:-}
+real=${CUA_PROXY_UPSTREAM:-}
+[ -n "$real" ] || [ -z "$node" ] || real=$(dirname -- "$node")/node_repl
+if [ ! -x "$real" ]; then
+  for app in /Applications/ChatGPT.app /Applications/Codex.app "$HOME/Applications/ChatGPT.app" "$HOME/Applications/Codex.app"; do
+    if [ -x "$app/Contents/Resources/cua_node/bin/node_repl" ]; then
+      real=$app/Contents/Resources/cua_node/bin/node_repl
+      [ -x "$node" ] || node=$app/Contents/Resources/cua_node/bin/node
+      break
+    fi
+  done
+fi
+[ -x "$real" ] || { echo "cua-proxy: the Codex CUA runtime (node_repl) was not found" >&2; exit 127; }
+# Not a CUA launch, switched off, or nothing to run the proxy with: be the stock runtime.
+if [ -z "${CUA_REPL_ENABLED_SURFACES:-}" ] || [ "${CUA_PROXY:-on}" = off ] || [ ! -x "$node" ] || [ ! -f "$here/proxy.mjs" ]; then
+  exec "$real" "$@"
+fi
+CUA_PROXY_UPSTREAM=$real exec "$node" "$here/proxy.mjs" "$@"
